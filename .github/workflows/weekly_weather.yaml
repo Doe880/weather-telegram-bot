@@ -1,0 +1,36 @@
+name: Weekly weather forecast
+
+on:
+  schedule:
+    - cron: "0 13 * * 6"
+      timezone: "Europe/Moscow"
+
+  workflow_dispatch:
+
+jobs:
+  send-weather:
+    runs-on: ubuntu-latest
+
+    env:
+      WEATHER_CITY: "Талдом, Московская область"
+      WEATHER_LAT: "56.7333"
+      WEATHER_LON: "37.5333"
+      WEATHER_TIMEZONE: "Europe/Moscow"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send weather forecast
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python weather_bot.py
