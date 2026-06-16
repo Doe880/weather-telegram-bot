@@ -40,6 +40,12 @@ RU_WEEKDAYS = {
     6: "Вс",
 }
 
+DAY_PARTS = [
+    ("🌅 Утро", 8),
+    ("☀️ День", 14),
+    ("🌙 Вечер", 20),
+]
+
 
 def get_required_env(name: str) -> str:
     value = os.getenv(name)
@@ -55,9 +61,9 @@ def format_number(value, digits=1) -> str:
 
 
 def get_weather_forecast():
-    city = os.getenv("WEATHER_CITY", "Москва")
-    latitude = os.getenv("WEATHER_LAT", "55.7558")
-    longitude = os.getenv("WEATHER_LON", "37.6173")
+    city = os.getenv("WEATHER_CITY", "Талдом, Московская область")
+    latitude = os.getenv("WEATHER_LAT", "56.7333")
+    longitude = os.getenv("WEATHER_LON", "37.5333")
     timezone = os.getenv("WEATHER_TIMEZONE", "Europe/Moscow")
 
     url = "https://api.open-meteo.com/v1/forecast"
@@ -67,13 +73,13 @@ def get_weather_forecast():
         "longitude": longitude,
         "timezone": timezone,
         "forecast_days": 7,
-        "daily": ",".join(
+        "hourly": ",".join(
             [
+                "temperature_2m",
                 "weather_code",
-                "temperature_2m_max",
-                "temperature_2m_min",
-                "precipitation_sum",
-                "precipitation_probability_max",
+                "precipitation",
+                "precipitation_probability",
+                "wind_speed_10m",
             ]
         ),
     }
@@ -82,52 +88,95 @@ def get_weather_forecast():
     response.raise_for_status()
 
     data = response.json()
-    daily = data.get("daily")
+    hourly = data.get("hourly")
 
-    if not daily:
-        raise RuntimeError("Open-Meteo не вернул дневной прогноз.")
+    if not hourly:
+        raise RuntimeError("Open-Meteo не вернул почасовой прогноз.")
 
-    return city, daily
+    return city, hourly
 
 
-def build_message(city: str, daily: dict) -> str:
-    dates = daily["time"]
-    weather_codes = daily["weather_code"]
-    temp_max = daily["temperature_2m_max"]
-    temp_min = daily["temperature_2m_min"]
-    precipitation_sum = daily["precipitation_sum"]
-    precipitation_probability = daily["precipitation_probability_max"]
+def group_hourly_by_date(hourly: dict) -> dict:
+    grouped = {}
+
+    times = hourly["time"]
+    temperatures = hourly["temperature_2m"]
+    weather_codes = hourly["weather_code"]
+    precipitations = hourly["precipitation"]
+    precipitation_probabilities = hourly["precipitation_probability"]
+    wind_speeds = hourly["wind_speed_10m"]
+
+    for i, time_str in enumerate(times):
+        dt = datetime.fromisoformat(time_str)
+        date_key = dt.date().isoformat()
+        hour = dt.hour
+
+        if date_key not in grouped:
+            grouped[date_key] = {}
+
+        grouped[date_key][hour] = {
+            "datetime": dt,
+            "temperature": temperatures[i],
+            "weather_code": weather_codes[i],
+            "precipitation": precipitations[i],
+            "precipitation_probability": precipitation_probabilities[i],
+            "wind_speed": wind_speeds[i],
+        }
+
+    return grouped
+
+
+def build_message(city: str, hourly: dict) -> str:
+    grouped = group_hourly_by_date(hourly)
 
     lines = [
         f"🌤 <b>Прогноз погоды на неделю: {escape(city)}</b>",
         "",
+        "Погода по периодам: утро, день, вечер.",
+        "",
     ]
 
-    for i, date_str in enumerate(dates):
-        date_obj = datetime.fromisoformat(date_str)
+    for date_key in list(grouped.keys())[:7]:
+        day_data = grouped[date_key]
+
+        first_hour = next(iter(day_data.values()))
+        date_obj = first_hour["datetime"]
+
         weekday = RU_WEEKDAYS[date_obj.weekday()]
         date_formatted = date_obj.strftime("%d.%m")
 
-        code = weather_codes[i]
-        description = WEATHER_CODES.get(code, "Погодные условия")
+        lines.append(f"<b>{weekday}, {date_formatted}</b>")
 
-        max_temp = round(temp_max[i])
-        min_temp = round(temp_min[i])
-        rain_mm = format_number(precipitation_sum[i])
-        rain_prob = precipitation_probability[i]
+        for part_name, hour in DAY_PARTS:
+            item = day_data.get(hour)
 
-        rain_prob_text = "—" if rain_prob is None else f"{rain_prob}%"
+            if not item:
+                lines.append(f"{part_name} {hour:02d}:00: данных нет")
+                continue
 
-        lines.append(
-            f"<b>{weekday}, {date_formatted}</b>: "
-            f"{description}, "
-            f"{min_temp}…{max_temp}°C, "
-            f"осадки: {rain_mm} мм, "
-            f"вероятность: {rain_prob_text}"
-        )
+            temperature = round(item["temperature"])
+            weather_code = item["weather_code"]
+            description = WEATHER_CODES.get(weather_code, "Погодные условия")
 
-    lines.append("")
-    lines.append("☔️ Осадки указаны в миллиметрах за сутки.")
+            precipitation = format_number(item["precipitation"])
+            probability = item["precipitation_probability"]
+            probability_text = "—" if probability is None else f"{probability}%"
+
+            wind_speed = format_number(item["wind_speed"])
+
+            lines.append(
+                f"{part_name} {hour:02d}:00: "
+                f"{temperature}°C, "
+                f"{description}, "
+                f"осадки {precipitation} мм, "
+                f"вероятность {probability_text}, "
+                f"ветер {wind_speed} км/ч"
+            )
+
+        lines.append("")
+
+    lines.append("☔️ Осадки указаны в миллиметрах за выбранный час.")
+    lines.append("🌬 Ветер указан в км/ч.")
 
     return "\n".join(lines)
 
@@ -155,8 +204,8 @@ def send_telegram_message(text: str):
 
 def main():
     try:
-        city, daily = get_weather_forecast()
-        message = build_message(city, daily)
+        city, hourly = get_weather_forecast()
+        message = build_message(city, hourly)
         send_telegram_message(message)
         print("Прогноз успешно отправлен.")
     except Exception as error:
