@@ -16,6 +16,7 @@ jobs:
       WEATHER_LAT: "56.7333"
       WEATHER_LON: "37.5333"
       WEATHER_TIMEZONE: "Europe/Moscow"
+      WEATHER_MODEL: "ecmwf_ifs025"
 
     steps:
       - name: Checkout repository
