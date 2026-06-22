@@ -213,7 +213,7 @@ def build_message(city: str, hourly: dict, model: str) -> str:
         f"🌤 <b>Прогноз погоды на неделю: {escape(city)}</b>",
         f"📊 Модель прогноза: <b>{escape(model_display_name)}</b>",
         "",
-        "Погода по периодам:ночь, утро, день, вечер.",
+        "Погода по периодам: ночь, утро, день, вечер.",
         "",
     ]
 

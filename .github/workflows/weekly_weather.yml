@@ -2,14 +2,14 @@ name: Weekly weather forecast
 
 on:
   schedule:
-    # GitHub Actions использует UTC.
-    # 10:00 UTC = 13:00 по Москве.
-     - cron: "45 7 * * 1"
+    # Ежедневно в 12:20 по Москве.
+    # GitHub Actions работает по UTC: 12:20 МСК = 09:20 UTC.
+    - cron: "20 9 * * *"
 
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   send-weather:
