@@ -2,9 +2,9 @@ name: Weekly weather forecast
 
 on:
   schedule:
-    # Ежедневно в 12:20 по Москве.
-    # GitHub Actions работает по UTC: 12:20 МСК = 09:20 UTC.
-    - cron: "37 10 * * *"
+    # Тестовый запуск: 22.06 в 16:28 по Москве.
+    - cron: "28 16 22 6 *"
+      timezone: "Europe/Moscow"
 
   workflow_dispatch:
 
@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
