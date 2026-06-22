@@ -48,9 +48,10 @@ RU_WEEKDAYS = {
 }
 
 DAY_PARTS = [
+    ("🌙 Ночь", 2),
     ("🌅 Утро", 8),
     ("☀️ День", 14),
-    ("🌙 Вечер", 20),
+    ("🌆 Вечер", 20),
 ]
 
 MODEL_DISPLAY_NAMES = {
@@ -138,7 +139,7 @@ def get_weather_forecast():
         "latitude": latitude,
         "longitude": longitude,
         "timezone": timezone,
-        "forecast_days": 7,
+        "forecast_days": 8,
         "hourly": ",".join(
             [
                 "temperature_2m",
@@ -212,11 +213,11 @@ def build_message(city: str, hourly: dict, model: str) -> str:
         f"🌤 <b>Прогноз погоды на неделю: {escape(city)}</b>",
         f"📊 Модель прогноза: <b>{escape(model_display_name)}</b>",
         "",
-        "Погода по периодам: утро, день, вечер.",
+        "Погода по периодам:ночь, утро, день, вечер.",
         "",
     ]
 
-    for date_key in sorted(grouped.keys())[:7]:
+    for date_key in sorted(grouped.keys())[:8]:
         day_data = grouped[date_key]
 
         first_hour = next(iter(day_data.values()))
