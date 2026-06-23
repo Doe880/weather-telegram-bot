@@ -2,9 +2,9 @@ name: Weekly weather forecast
 
 on:
   schedule:
-    # Тестовый запуск: 22.06 в 16:28 по Москве.
-    - cron: "28 16 22 6 *"
-      timezone: "Europe/Moscow"
+    # Каждую среду в 11:27 по Москве.
+    # GitHub Actions работает по UTC: 11:27 МСК = 08:27 UTC.
+    - cron: "27 14 * * 2"
 
   workflow_dispatch:
 
