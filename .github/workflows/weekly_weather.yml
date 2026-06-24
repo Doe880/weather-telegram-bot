@@ -4,7 +4,7 @@ on:
   schedule:
     # Каждую среду в 11:27 по Москве.
     # GitHub Actions работает по UTC: 11:27 МСК = 08:27 UTC.
-    - cron: "26 14 * * 2"
+    - cron: "26 17 * * 3"
 
   workflow_dispatch:
 
